@@ -58,10 +58,44 @@ def migrate_courses_table():
         
         connection.commit()
 
+def migrate_enrollments_table():
+    """Add zoom_link column to enrollments table"""
+    with engine.connect() as connection:
+        try:
+            # Try to add zoom_link column
+            connection.execute(text("ALTER TABLE enrollments ADD COLUMN zoom_link VARCHAR"))
+            print("✓ Added 'zoom_link' column to enrollments table")
+        except Exception as e:
+            if "already exists" in str(e):
+                print("✓ 'zoom_link' column already exists")
+            else:
+                print(f"! Error adding 'zoom_link' column: {e}")
+        
+        connection.commit()
+
+def migrate_classes_table():
+    """Add zoom_link column to classes table"""
+    with engine.connect() as connection:
+        try:
+            # Try to add zoom_link column
+            connection.execute(text("ALTER TABLE classes ADD COLUMN zoom_link VARCHAR"))
+            print("✓ Added 'zoom_link' column to classes table")
+        except Exception as e:
+            if "already exists" in str(e):
+                print("✓ 'zoom_link' column already exists")
+            else:
+                print(f"! Error adding 'zoom_link' column: {e}")
+        
+        connection.commit()
+
 if __name__ == "__main__":
     print("Starting database migration...")
     print("\nMigrating users table:")
     migrate_users_table()
     print("\nMigrating courses table:")
     migrate_courses_table()
+    print("\nMigrating enrollments table:")
+    migrate_enrollments_table()
+    print("\nMigrating classes table:")
+    migrate_classes_table()
     print("\n✓ Migration complete!")

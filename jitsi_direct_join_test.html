@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jitsi Direct Join Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f9f9f9;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px 5px 10px 0;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .room-input {
+            padding: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .code-block {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .info {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Jitsi Direct Join Test</h1>
+        
+        <div class="test-section">
+            <h2>Test 1: Pre-Generated Room Links</h2>
+            <p>Click any of these links to test direct joining:</p>
+            
+            <p>
+                <a href="https://meet.jitsi.net/noorib9e224cc42" target="_blank" class="button">
+                    Join: noorib9e224cc42
+                </a>
+            </p>
+            <p>
+                <a href="https://meet.jitsi.net/noori29d150ea5f" target="_blank" class="button">
+                    Join: noori29d150ea5f
+                </a>
+            </p>
+            
+            <div class="info">
+                ✓ <span class="success">Expected Result:</span> Meeting room opens automatically (auto-join)<br>
+                ✗ Problem: If Jitsi homepage appears, the room name may not be parsing correctly
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 2: Custom Room Generator</h2>
+            <p>Enter a custom room name to generate and join a Jitsi URL:</p>
+            
+            <input type="text" class="room-input" id="roomNameInput" placeholder="e.g., Python Basics" value="TestClass123">
+            <br>
+            
+            <button class="button" onclick="generateAndOpen()">Generate & Open Meeting</button>
+            <button class="button" onclick="generateLink()">Generate Link Only</button>
+            
+            <div id="generatedLink"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 3: URL Format Reference</h2>
+            <p>Standard Jitsi URL format:</p>
+            <div class="code-block">
+https://meet.jitsi.net/{room-name}
+            </div>
+            
+            <p>Noori room format (from API):</p>
+            <div class="code-block">
+https://meet.jitsi.net/noori{10-char-hex}
+            </div>
+            
+            <p>Example:</p>
+            <div class="code-block">
+https://meet.jitsi.net/noorib9e224cc42
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 4: Backend API Values</h2>
+            <p>When your API returns this response:</p>
+            <div class="code-block">
+{
+  "zoom_link": "https://meet.jitsi.net/noori29d150ea5f",
+  "meeting_id": "noori29d150ea5f",
+  "jitsi_url": "https://meet.jitsi.net/noori29d150ea5f"
+}
+            </div>
+            
+            <p>The frontend should:</p>
+            <ol>
+                <li>Extract <code>zoom_link</code> or <code>jitsi_url</code></li>
+                <li>Open it in new window: <code>window.open(zoom_link, '_blank')</code></li>
+                <li>OR create link: <code>&lt;a href="{zoom_link}" target="_blank"&gt;Join&lt;/a&gt;</code></li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>Troubleshooting</h2>
+            
+            <h3>Issue: Landing on Jitsi Homepage</h3>
+            <ul>
+                <li>✗ <strong>Wrong:</strong> https://meet.jitsi.net/ (no room name)</li>
+                <li>✗ <strong>Wrong:</strong> https://meet.jitsi.net/Noori123 (mixed case)</li>
+                <li>✓ <strong>Correct:</strong> https://meet.jitsi.net/noorib9e224cc42 (lowercase, 15 chars)</li>
+            </ul>
+            
+            <h3>Issue: Meeting doesn't load</h3>
+            <ul>
+                <li>Check URL has correct room name (lowercase, no spaces)</li>
+                <li>Verify browser allows camera/microphone access</li>
+                <li>Try in different browser (Chrome, Firefox, Safari)</li>
+            </ul>
+            
+            <h3>Issue: Multiple students see different rooms</h3>
+            <ul>
+                <li>Ensure same course = same room ID (deterministic from course name)</li>
+                <li>Check backend is generating consistent IDs</li>
+            </ul>
+        </div>
+
+        <div class="test-section" style="background-color: #fffbea; border-left-color: #ffc107;">
+            <h2>✓ Expected Behavior</h2>
+            <ul>
+                <li>Click link → Browser opens new tab</li>
+                <li>New tab shows Jitsi interface (not homepage)</li>
+                <li>Camera/mic permissions prompt appears</li>
+                <li>Meeting room loads and auto-starts</li>
+                <li>Multiple users can join same room with same URL</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function generateAndOpen() {
+            const roomName = document.getElementById('roomNameInput').value.trim();
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
+            
+            const jitsiUrl = `https://meet.jitsi.net/${roomName.toLowerCase().replace(/\s+/g, '-')}`;
+            
+            // Display generated link
+            const linkDiv = document.getElementById('generatedLink');
+            linkDiv.innerHTML = `
+                <p><strong>Generated URL:</strong></p>
+                <div class="code-block">${jitsiUrl}</div>
+                <p><a href="${jitsiUrl}" target="_blank" class="button">Open Meeting Now</a></p>
+            `;
+            
+            // Open in new window
+            window.open(jitsiUrl, '_blank');
+        }
+
+        function generateLink() {
+            const roomName = document.getElementById('roomNameInput').value.trim();
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
+            
+            const jitsiUrl = `https://meet.jitsi.net/${roomName.toLowerCase().replace(/\s+/g, '-')}`;
+            
+            const linkDiv = document.getElementById('generatedLink');
+            linkDiv.innerHTML = `
+                <p><strong>Generated URL:</strong></p>
+                <div class="code-block">${jitsiUrl}</div>
+                <p>
+                    <a href="${jitsiUrl}" target="_blank" class="button">Open Meeting</a>
+                    <button class="button" style="background-color: #6c757d;" onclick="copyToClipboard('${jitsiUrl}')">Copy Link</button>
+                </p>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Link copied to clipboard!');
+            });
+        }
+
+        // Auto-generate on page load
+        window.addEventListener('load', function() {
+            console.log('Jitsi Direct Join Test page loaded');
+            console.log('Test links are ready - click any button to test');
+        });
+    </script>
+</body>
+</html>

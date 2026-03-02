@@ -48,6 +48,8 @@ class CourseResponse(CourseBase):
     id: int
     is_active: bool
     created_at: datetime
+    teacher_id: Optional[int] = None
+    enrolled_count: Optional[int] = None
     
     class Config:
         from_attributes = True
@@ -90,6 +92,10 @@ class TimeSlotResponse(TimeSlotBase):
         from_attributes = True
 
 # Enrollment Schemas
+class QuickEnrollRequest(BaseModel):
+    course_id: int
+    time_slot_id: int
+
 class EnrollmentCreate(BaseModel):
     course_id: int
     teacher_id: int
@@ -109,8 +115,8 @@ class EnrollmentResponse(BaseModel):
     start_date: date
     end_date: date
     is_active: bool
-    zoom_link: Optional[str] = None
     created_at: datetime
+    zoom_link: Optional[str] = None
     course: CourseResponse
     teacher: TeacherResponse
     time_slot: TimeSlotResponse

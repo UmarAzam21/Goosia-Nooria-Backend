@@ -23,7 +23,7 @@ def get_all_teachers(
     """Get all available teachers (course_id parameter is ignored to show all teachers)"""
     query = db.query(Teacher).join(User, Teacher.user_id == User.id).filter(
         Teacher.is_available == True
-    )
+    ).order_by(User.name)
     
     # Show all available teachers regardless of course_id
     # This allows students to choose from any available teacher for any course

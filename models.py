@@ -117,11 +117,11 @@ class Enrollment(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     teacher_id = Column(Integer, ForeignKey("teachers.id"))
     time_slot_id = Column(Integer, ForeignKey("time_slots.id"))
-    payment_method = Column(Enum(PaymentMethod, native_enum=False), nullable=False)
+    payment_method = Column(Enum(PaymentMethod, native_enum=False), nullable=True)
     payment_status = Column(Enum(PaymentStatus, native_enum=False), default=PaymentStatus.PENDING)
     enrollment_status = Column(Enum(EnrollmentStatus, native_enum=False), default=EnrollmentStatus.PENDING_TEACHER)
     start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True)
     zoom_link = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -140,11 +140,11 @@ class Payment(Base):
     __tablename__ = "payments"
     
     id = Column(Integer, primary_key=True, index=True)
-    enrollment_id = Column(Integer, ForeignKey("enrollments.id"), unique=True)
+    enrollment_id = Column(Integer, ForeignKey("enrollments.id"))
     amount = Column(Float, nullable=False)
-    payment_method = Column(Enum(PaymentMethod, native_enum=False), nullable=False)
-    payment_status = Column(Enum(PaymentStatus, native_enum=False), default=PaymentStatus.PENDING)
-    transaction_id = Column(String, nullable=True)  # JazzCash/Easypaisa/Bank transaction ID
+    payment_method = Column(String, nullable=False)  # 'jazzcash', 'easypaisa', 'bank_transfer'
+    payment_status = Column(String, nullable=True)  # Enum stored as string
+    transaction_id = Column(String, nullable=True)  # JazzCash/Easypaisa transaction ID
     payment_proof_url = Column(String, nullable=True)  # Screenshot/receipt URL
     batch_number = Column(String, nullable=True)  # Receipt batch number
     paid_at = Column(DateTime(timezone=True), nullable=True)
@@ -220,6 +220,25 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     is_sent = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class AdminMessage(Base):
+    __tablename__ = "admin_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"))
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Track who sent: student_id or admin_id
+    student_name = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)
+    is_read = Column(Boolean, default=False, server_default="false")  # Set both Python and database defaults
+    is_responded = Column(Boolean, default=False)
+    recipient_type = Column(String, default="admin", nullable=False)  # 'admin' or 'teacher'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    responded_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    student = relationship("User", foreign_keys=[student_id])
+
 class Coupon(Base):
     __tablename__ = "coupons"
     
@@ -248,6 +267,24 @@ coupon_courses = Table(
     Column('course_id', Integer, ForeignKey('courses.id'))
 )
 
+class PaymentProof(Base):
+    __tablename__ = "payment_proofs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    enrollment_id = Column(Integer, ForeignKey("enrollments.id"))
+    reference_number = Column(String, nullable=False, index=True)
+    payment_method = Column(String, nullable=False)  # 'jazzcash', 'easypaisa', 'bank_transfer'
+    proof_file_path = Column(String, nullable=False)  # Path to uploaded screenshot
+    status = Column(String, default="pending")  # 'pending', 'approved', 'rejected'
+    rejection_reason = Column(String, nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    enrollment = relationship("Enrollment", foreign_keys=[enrollment_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
 class CourseGroup(Base):
     __tablename__ = "course_groups"
     
@@ -262,6 +299,19 @@ class CourseGroup(Base):
     course = relationship("Course", back_populates="groups")
     enrollment = relationship("Enrollment", back_populates="group")
     messages = relationship("GroupMessage", back_populates="group")
+    students = relationship("StudentCourseGroup", back_populates="group")
+
+class StudentCourseGroup(Base):
+    __tablename__ = "student_course_groups"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"))
+    course_group_id = Column(Integer, ForeignKey("course_groups.id"))
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    student = relationship("User", foreign_keys=[student_id])
+    group = relationship("CourseGroup", back_populates="students")
 
 class GroupMessage(Base):
     __tablename__ = "group_messages"

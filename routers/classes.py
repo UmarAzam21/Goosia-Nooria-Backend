@@ -199,10 +199,25 @@ def join_class(
     db.commit()
     print(f"[DEBUG] Total notifications created: {notifications_created}")
     
+    # Extract room ID from jitsi_link for clarity
+    room_id = class_obj.meeting_id or getattr(class_obj, 'meeting_id', 'unknown')
+    
+    # Ensure jitsi_link is a valid Jitsi URL
+    jitsi_link = class_obj.jitsi_link
+    if jitsi_link and not jitsi_link.startswith('https://'):
+        jitsi_link = f"https://meet.jitsi.net/{jitsi_link}"
+    
     return {
-        "zoom_link": class_obj.zoom_link,
-        "meeting_id": getattr(class_obj, 'meeting_id', None),
-        "message": f"Attendance marked as present, {notifications_created} notifications sent"
+        "success": True,
+        "jitsi_link": jitsi_link,  # Full URL: https://meet.jitsi.net/noorib9e224cc42
+        "meeting_id": room_id,  # Just the room ID: noorib9e224cc42
+        "jitsi_room": room_id,  # Same as meeting_id for clarity
+        "jitsi_url": jitsi_link,  # Explicit Jitsi URL
+        "class_name": enrollment.course.name if enrollment.course else "Class",
+        "attendance_status": "present",
+        "notifications_created": notifications_created,
+        "message": f"Join the meeting at: {jitsi_link}",
+        "instructions": "Click the zoom_link or jitsi_url to join the meeting directly"
     }
 
 @router.put("/{class_id}/attendance")
@@ -253,3 +268,83 @@ def upload_class_materials(
     db.commit()
     
     return {"message": "Materials uploaded successfully"}
+
+@router.get("/{class_id}/bbb-join-url")
+def get_bbb_join_url(
+    class_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get Google Meet calendar link for a class"""
+    class_obj = db.query(Class).filter(Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Verify user has access to this class
+    enrollment = db.query(Enrollment).filter(Enrollment.id == class_obj.enrollment_id).first()
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Check access permissions
+    is_teacher = current_user.role == UserRole.TEACHER and current_user.teacher_profile and enrollment.teacher_id == current_user.teacher_profile.id
+    is_student = current_user.role == UserRole.STUDENT and enrollment.student_id == current_user.id
+    is_admin = current_user.role == UserRole.ADMIN
+    
+    if not (is_teacher or is_student or is_admin):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Return the Google Calendar/Meet link from enrollment
+    if not enrollment.zoom_link:
+        raise HTTPException(status_code=404, detail="Calendar link not found for this class")
+    
+    return {
+        "meet_link": enrollment.zoom_link,
+        "calendar_link": enrollment.zoom_link,
+        "class_name": enrollment.course.name if enrollment.course else "Class",
+        "is_organizer": is_teacher,
+        "message": "Google Calendar with Meet link"
+    }
+
+
+@router.get("/{class_id}/open-meeting")
+def open_class_meeting(
+    class_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Redirect to Jitsi meeting room for the class
+    This endpoint ensures students go DIRECTLY to the meeting, not to Jitsi homepage
+    """
+    class_obj = db.query(Class).filter(Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Get enrollment to check access
+    enrollment = db.query(Enrollment).filter(Enrollment.id == class_obj.enrollment_id).first()
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Check if user is student or teacher
+    is_student = current_user.id == enrollment.student_id
+    is_teacher = current_user.id == enrollment.teacher.user_id if enrollment.teacher else False
+    
+    if not (is_student or is_teacher):
+        raise HTTPException(status_code=403, detail="Access denied to this class")
+    
+    # Get the meeting link
+    if not class_obj.zoom_link:
+        raise HTTPException(status_code=404, detail="Meeting link not found for this class")
+    
+    # Mark attendance
+    class_obj.attendance_status = AttendanceStatus.PRESENT
+    class_obj.status = ClassStatus.IN_PROGRESS
+    db.commit()
+    
+    # Return direct link to Jitsi room
+    return {
+        "meeting_url": class_obj.zoom_link,
+        "room_id": class_obj.meeting_id,
+        "class_name": enrollment.course.name if enrollment.course else "Class",
+        "message": "Click the meeting_url link OR visit this address in your Jitsi app"
+    }

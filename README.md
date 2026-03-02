@@ -12,8 +12,17 @@ Backend API for the Masjid Online Class Portal built with FastAPI and PostgreSQL
 - ✅ Automatic Daily Class Creation
 - ✅ Attendance Tracking
 - ✅ Real-time Chat System
-- ✅ Video Class Integration (Zoom links)
+- ✅ Video Class Integration (Jitsi Meet)
 - ✅ Dashboard for Students, Teachers & Admin
+
+## Video Conferencing
+
+Uses **Jitsi Meet** for reliable, instant video conferencing:
+- No API keys or complex setup needed
+- Students click join link → instant access to video room
+- Deterministic room IDs based on class name
+- Works immediately without buffering or delays
+- URLs: `https://meet.jitsi.net/Noori{room_id}`
 
 ## Tech Stack
 

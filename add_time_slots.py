@@ -1,37 +1,91 @@
 from database import SessionLocal
-from models import TimeSlot
+from models import TimeSlot, Teacher
 from datetime import time
 
 db = SessionLocal()
+
+print("=" * 80)
+print("ADDING DAILY TIME SLOTS FOR ALL TEACHERS")
+print("=" * 80)
+
+# Get all teachers
+teachers = db.query(Teacher).all()
+
+if not teachers:
+    print("❌ No teachers found in the database")
+    db.close()
+    exit(1)
+
+print(f"\n📋 Found {len(teachers)} teacher(s)")
+
+# Time slots to add: Morning 6-7 AM and Night 9-10 PM
+time_slots_data = [
+    {"name": "Morning", "start": time(6, 0), "end": time(7, 0)},
+    {"name": "Night", "start": time(21, 0), "end": time(22, 0)},  # 9 PM - 10 PM in 24-hour format
+]
+
+# Days of week
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
 try:
-    # Add missing slots for each teacher
-    new_slots = [
-        # Teacher 1 - add Afternoon (2-3 PM) and Evening (9-10 PM)
-        {'teacher_id': 1, 'day_of_week': 'Tuesday', 'start_time': time(14, 0), 'end_time': time(15, 0)},
-        {'teacher_id': 1, 'day_of_week': 'Wednesday', 'start_time': time(21, 0), 'end_time': time(22, 0)},
+    for teacher in teachers:
+        print(f"\n👨‍🏫 Teacher ID {teacher.id} ({teacher.user.email}):")
         
-        # Teacher 2 - add Morning (9-10 AM) and Afternoon (2-3 PM)
-        {'teacher_id': 2, 'day_of_week': 'Monday', 'start_time': time(9, 0), 'end_time': time(10, 0)},
-        {'teacher_id': 2, 'day_of_week': 'Tuesday', 'start_time': time(14, 0), 'end_time': time(15, 0)},
+        # Delete existing time slots for this teacher
+        existing_slots = db.query(TimeSlot).filter(TimeSlot.teacher_id == teacher.id).all()
+        print(f"   Removing {len(existing_slots)} existing time slots...")
+        for slot in existing_slots:
+            db.delete(slot)
+        db.commit()
         
-        # Teacher 3 - add Morning (9-10 AM) and Afternoon (2-3 PM) and Evening (9-10 PM)
-        {'teacher_id': 3, 'day_of_week': 'Monday', 'start_time': time(9, 0), 'end_time': time(10, 0)},
-        {'teacher_id': 3, 'day_of_week': 'Tuesday', 'start_time': time(14, 0), 'end_time': time(15, 0)},
-        {'teacher_id': 3, 'day_of_week': 'Wednesday', 'start_time': time(21, 0), 'end_time': time(22, 0)},
-    ]
+        # Add new time slots for each day
+        added_count = 0
+        for time_slot in time_slots_data:
+            for day in days:
+                new_slot = TimeSlot(
+                    teacher_id=teacher.id,
+                    day_of_week=day,
+                    start_time=time_slot["start"],
+                    end_time=time_slot["end"],
+                    is_available=True
+                )
+                db.add(new_slot)
+                added_count += 1
+        
+        db.commit()
+        print(f"   ✅ Added {added_count} new time slots")
+        print(f"      - Morning: 6:00 AM - 7:00 AM (All 7 days)")
+        print(f"      - Night: 9:00 PM - 10:00 PM (All 7 days)")
     
-    for slot_data in new_slots:
-        slot = TimeSlot(**slot_data)
-        db.add(slot)
+    print("\n" + "=" * 80)
+    print("✅ TIME SLOTS CONFIGURED SUCCESSFULLY")
+    print("=" * 80)
     
-    db.commit()
-    print(f'✓ Added {len(new_slots)} time slots to existing teachers')
-    print('\nTime slots now available:')
-    print('Teacher 1 - Morning (9-10 AM), Afternoon (2-3 PM), Evening (9-10 PM)')
-    print('Teacher 2 - Morning (9-10 AM), Afternoon (2-3 PM), Evening (5-6 PM)')
-    print('Teacher 3 - Morning (9-10 AM), Afternoon (2-3 PM), Evening (9-10 PM)')
+    # Show summary
+    print("\n📊 TIME SLOTS SUMMARY:")
+    for teacher in teachers:
+        slots = db.query(TimeSlot).filter(TimeSlot.teacher_id == teacher.id).all()
+        
+        # Group by time
+        times = {}
+        for slot in slots:
+            time_key = f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}"
+            if time_key not in times:
+                times[time_key] = []
+            times[time_key].append(slot.day_of_week)
+        
+        print(f"\n👨‍🏫 {teacher.user.email}:")
+        for time_key, days_list in sorted(times.items()):
+            if len(set(days_list)) == 7:
+                print(f"   ✅ {time_key}: All Days (Mon-Sun)")
+            else:
+                print(f"   ✅ {time_key}: {', '.join(sorted(set(days_list)))}")
+    
+    print("\n✨ Daily time slots are ready!")
+    print("   Students can enroll in 6-7 AM or 9-10 PM classes any day of the week")
+
 except Exception as e:
-    print(f'Error: {e}')
+    print(f"❌ Error: {e}")
     db.rollback()
 finally:
     db.close()

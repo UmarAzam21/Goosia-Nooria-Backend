@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
 from database import engine, Base
-from routers import auth, courses, teachers, enrollments, classes, payments, chat, dashboard, admin, notifications, coupons, students, groups
+from routers import auth, courses, teachers, enrollments, classes, payments, chat, dashboard, admin, notifications, coupons, students, groups, meetings, admin_messages, websocket_chat
 from scheduler import start_scheduler
 
 @asynccontextmanager
@@ -26,7 +26,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +46,9 @@ app.include_router(students.router, prefix="/api/students", tags=["Student Profi
 app.include_router(groups.router, prefix="/api/groups", tags=["Course Groups"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(notifications.router)
+app.include_router(admin_messages.router)
+app.include_router(meetings.router, prefix="/api", tags=["Meetings"])
+app.include_router(websocket_chat.router, tags=["WebSocket Chat"])
 
 @app.get("/")
 def read_root():
@@ -55,5 +58,11 @@ def read_root():
 def health_check():
     return {"status": "OK", "message": "API is healthy"}
 
+@app.get("/api/health/google-meet")
+def google_meet_health_check():
+    """Check if Google Meet integration is properly configured"""
+    from google_meet_service import test_connection
+    return test_connection()
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=5001, reload=False)

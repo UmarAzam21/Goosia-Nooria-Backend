@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import User, UserRole, Course, Teacher, Enrollment, Payment, PaymentStatus
+from models import User, UserRole, Course, Teacher, Enrollment, Payment, PaymentStatus, EnrollmentStatus
 from schemas import UserResponse, CourseResponse, CourseCreate
 from auth import require_admin, get_current_user
 
@@ -304,14 +304,25 @@ def approve_payment(
             detail="Payment not found"
         )
     
+    # Update payment status
     payment.payment_status = PaymentStatus.COMPLETED
+    
+    # Also activate the enrollment when payment is approved
+    enrollment = db.query(Enrollment).filter(Enrollment.id == payment.enrollment_id).first()
+    if enrollment:
+        enrollment.is_active = True
+        enrollment.enrollment_status = EnrollmentStatus.APPROVED
+    
     db.commit()
     db.refresh(payment)
+    if enrollment:
+        db.refresh(enrollment)
     
     return {
         "message": "Payment approved",
         "payment_id": payment.id,
-        "status": "completed"
+        "status": "completed",
+        "enrollment_id": enrollment.id if enrollment else None
     }
 
 @router.put("/payments/{payment_id}/reject")

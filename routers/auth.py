@@ -18,10 +18,7 @@ from auth import (
 # Schema for profile update
 class ProfileUpdate(BaseModel):
     name: str
-    phone: str | None = None
-    country: str | None = None
     city: str | None = None
-    timezone: str = "UTC"
 
 # Schema for admin teacher creation
 class TeacherCreate(BaseModel):
@@ -34,18 +31,12 @@ class TeacherUpdate(BaseModel):
     name: str | None = None
     email: str | None = None
     password: str | None = None
-    phone: str | None = None
-    country: str | None = None
-    timezone: str | None = None
 
 # Schema for teacher response
 class TeacherResponse(BaseModel):
     id: str
     name: str
     email: str
-    phone: str | None
-    country: str | None
-    timezone: str | None
     is_active: bool | None
     created_at: str | None
     
@@ -73,16 +64,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             email=user.email,
             password_hash=hashed_password,
             role=user.role,
-            phone=user.phone,
-            country=user.country,
-            city=user.city,
-            timezone=user.timezone
+            city=user.city
         )
         db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        db.flush()  # Get the ID without refreshing
         
-        # If user is registering as a teacher, create a teacher profile
+        # If user is registering as a teacher, create teacher profile and time slots
         if user.role == UserRole.TEACHER or (hasattr(user.role, 'value') and user.role.value == 'teacher') or str(user.role).lower() == 'teacher':
             teacher_profile = Teacher(
                 user_id=db_user.id,
@@ -92,45 +79,34 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
                 is_available=True
             )
             db.add(teacher_profile)
-            db.commit()
-            db.refresh(teacher_profile)
-            print(f"[INFO] Teacher profile created for user: {db_user.email} (ID: {db_user.id})")
+            db.flush()  # Get the teacher ID
             
-            # Create default time slots for the teacher
-            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+            # Bulk create all time slots (no loops, no individual commits)
             time_slots_data = [
-                {"day": "Monday", "start": time(9, 0), "end": time(11, 0)},
-                {"day": "Monday", "start": time(11, 0), "end": time(13, 0)},
-                {"day": "Tuesday", "start": time(14, 0), "end": time(16, 0)},
-                {"day": "Tuesday", "start": time(16, 0), "end": time(18, 0)},
-                {"day": "Wednesday", "start": time(9, 0), "end": time(11, 0)},
-                {"day": "Wednesday", "start": time(11, 0), "end": time(13, 0)},
-                {"day": "Thursday", "start": time(14, 0), "end": time(16, 0)},
-                {"day": "Thursday", "start": time(16, 0), "end": time(18, 0)},
-                {"day": "Friday", "start": time(9, 0), "end": time(11, 0)},
-                {"day": "Friday", "start": time(11, 0), "end": time(13, 0)},
-                {"day": "Saturday", "start": time(14, 0), "end": time(16, 0)},
-                {"day": "Saturday", "start": time(16, 0), "end": time(18, 0)},
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Monday", start_time=time(9, 0), end_time=time(11, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Monday", start_time=time(11, 0), end_time=time(13, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Tuesday", start_time=time(14, 0), end_time=time(16, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Tuesday", start_time=time(16, 0), end_time=time(18, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Wednesday", start_time=time(9, 0), end_time=time(11, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Wednesday", start_time=time(11, 0), end_time=time(13, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Thursday", start_time=time(14, 0), end_time=time(16, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Thursday", start_time=time(16, 0), end_time=time(18, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Friday", start_time=time(9, 0), end_time=time(11, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Friday", start_time=time(11, 0), end_time=time(13, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Saturday", start_time=time(14, 0), end_time=time(16, 0), is_available=True),
+                TimeSlot(teacher_id=teacher_profile.id, day_of_week="Saturday", start_time=time(16, 0), end_time=time(18, 0), is_available=True),
             ]
-            
-            for slot_data in time_slots_data:
-                time_slot = TimeSlot(
-                    teacher_id=teacher_profile.id,
-                    day_of_week=slot_data["day"],
-                    start_time=slot_data["start"],
-                    end_time=slot_data["end"],
-                    is_available=True
-                )
-                db.add(time_slot)
-            
-            db.commit()
-            print(f"[INFO] Created {len(time_slots_data)} default time slots for teacher ID {teacher_profile.id}")
+            db.add_all(time_slots_data)
+        
+        # Single commit for everything
+        db.commit()
         
         print(f"[INFO] User registered successfully: {db_user.email} (ID: {db_user.id})")
         return db_user
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         print(f"[ERROR] Registration error: {str(e)}")
         import traceback
         traceback.print_exc()
@@ -231,10 +207,7 @@ def update_profile(
         
         # Update allowed fields
         user.name = profile_data.name
-        user.phone = profile_data.phone
-        user.country = profile_data.country
         user.city = profile_data.city
-        user.timezone = profile_data.timezone
         
         db.commit()
         db.refresh(user)
@@ -279,10 +252,7 @@ def create_teacher_admin(
             name=teacher_data.name,
             email=teacher_data.email,
             password_hash=hashed_password,
-            role="teacher",
-            phone=None,
-            country=None,
-            timezone="UTC+00:00"
+            role="teacher"
         )
         db.add(db_user)
         db.commit()
@@ -365,9 +335,6 @@ def list_teachers(
                 "id": teacher.id,
                 "name": teacher.name,
                 "email": teacher.email,
-                "phone": teacher.phone,
-                "country": teacher.country,
-                "timezone": teacher.timezone,
                 "is_active": not teacher.frozen_by_admin if hasattr(teacher, 'frozen_by_admin') else True,
                 "created_at": teacher.created_at.isoformat() if teacher.created_at else None,
             })
@@ -420,12 +387,6 @@ def update_teacher_admin(
             teacher.email = teacher_data.email
         if teacher_data.password is not None:
             teacher.password_hash = get_password_hash(teacher_data.password)
-        if teacher_data.phone is not None:
-            teacher.phone = teacher_data.phone
-        if teacher_data.country is not None:
-            teacher.country = teacher_data.country
-        if teacher_data.timezone is not None:
-            teacher.timezone = teacher_data.timezone
         
         db.commit()
         db.refresh(teacher)

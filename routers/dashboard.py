@@ -266,7 +266,6 @@ def get_all_teachers(
             "id": teacher.id,
             "name": teacher.user.name,
             "email": teacher.user.email,
-            "phone": teacher.user.phone,
             "bio": teacher.bio,
             "experience_years": teacher.experience_years,
             "qualification": teacher.qualification,

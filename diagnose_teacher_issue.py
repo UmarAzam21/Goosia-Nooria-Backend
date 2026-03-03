@@ -145,7 +145,7 @@ if enrollment_response.status_code != 201:
     print("\n[FALLBACK] Checking database directly...")
     import psycopg2
     try:
-        conn = psycopg2.connect("postgresql://postgres:umar123@localhost:5432/masjid_portal")
+        conn = psycopg2.connect("postgresql://postgres:bZ2BD!RLXb_s9-c@efdvqqbkykonjawgrpos.supabase.co:5432/postgres")
         cur = conn.cursor()
         
         # Get the most recent enrollment
@@ -190,7 +190,7 @@ print("-" * 90)
 
 import psycopg2
 try:
-    conn = psycopg2.connect("postgresql://postgres:umar123@localhost:5432/masjid_portal")
+    conn = psycopg2.connect("postgresql://postgres:bZ2BD!RLXb_s9-c@efdvqqbkykonjawgrpos.supabase.co:5432/postgres")
     cur = conn.cursor()
     
     # Get the enrollment we just created

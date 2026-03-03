@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:umar123@localhost:5432/masjid_portal")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:bZ2BD!RLXb_s9-c@db.efdvqqbkykonjawgrpos.supabase.co:5432/postgres")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

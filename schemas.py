@@ -7,10 +7,7 @@ from models import UserRole, PaymentStatus, PaymentMethod, ClassStatus, Attendan
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    phone: Optional[str] = None
-    country: Optional[str] = None
     city: Optional[str] = None
-    timezone: str = "UTC"
 
 class UserCreate(UserBase):
     password: str

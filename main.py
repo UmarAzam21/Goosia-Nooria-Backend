@@ -10,11 +10,14 @@ from scheduler import start_scheduler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create tables and start scheduler
-    Base.metadata.create_all(bind=engine)
+    # Skip table creation during startup - tables should already exist in Supabase
+    # Uncomment below only if needed: Base.metadata.create_all(bind=engine)
     # Temporarily disable scheduler due to enum issues
     # start_scheduler()
+    print("[OK] Application startup complete")
     yield
     # Shutdown: cleanup if needed
+    print("[OK] Application shutdown")
 
 app = FastAPI(
     title="Masjid Online Class Portal API",

@@ -44,10 +44,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(Enum(UserRole, native_enum=False), nullable=False, default=UserRole.STUDENT)
-    phone = Column(String, nullable=True)
-    country = Column(String, nullable=True)  # e.g., "Pakistan"
     city = Column(String, nullable=True)      # e.g., "Karachi"
-    timezone = Column(String, default="UTC")  # e.g., "Asia/Karachi"
     frozen_by_admin = Column(Boolean, default=False)
     freeze_reason = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

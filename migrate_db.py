@@ -3,8 +3,8 @@ Database migration script to add new columns to existing tables
 """
 from sqlalchemy import text, create_engine
 
-# Explicitly use PostgreSQL
-DATABASE_URL = "postgresql://postgres:umar123@localhost:5432/masjid_portal"
+# Explicitly use PostgreSQL - Supabase Cloud Database
+DATABASE_URL = "postgresql://postgres:bZ2BD!RLXb_s9-c@efdvqqbkykonjawgrpos.supabase.co:5432/postgres"
 engine = create_engine(DATABASE_URL)
 
 def migrate_users_table():
